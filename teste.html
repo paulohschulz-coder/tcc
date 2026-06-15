@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scout de Vôlei</title>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#f4f4f4;
+    padding:20px;
+}
+
+h1,h2{
+    text-align:center;
+}
+
+.adicionar{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+input{
+    padding:8px;
+    width:120px;
+}
+
+button{
+    padding:4px 8px;
+    margin:2px;
+    cursor:pointer;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:white;
+    margin-bottom:20px;
+}
+
+th, td{
+    border:1px solid #ccc;
+    padding:8px;
+    text-align:center;
+}
+
+th{
+    background:#222;
+    color:white;
+}
+
+.media{
+    font-weight:bold;
+}
+
+.resumo{
+    background:white;
+    padding:15px;
+    border-radius:10px;
+}
+</style>
+</head>
+<body>
+
+<h1>Scout de Vôlei</h1>
+
+<div class="adicionar">
+    <input type="number" id="numeroJogador" placeholder="Número">
+    <button onclick="adicionarJogador()">Adicionar Jogador</button>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Nº</th>
+            <th>Passe</th>
+            <th>Levantamento</th>
+            <th>Saque</th>
+            <th>Ataque</th>
+            <th>Bloqueio</th>
+            <th>Média</th>
+            <th>Ação</th>
+        </tr>
+    </thead>
+
+    <tbody id="tabelaJogadores"></tbody>
+</table>
+
+<div class="resumo">
+    <h2>Estatísticas</h2>
+    <div id="estatisticas"></div>
+</div>
+
+<script>
+
+const jogadores = {};
+
+const fundamentos = [
+    "passe",
+    "levantamento",
+    "saque",
+    "ataque"
+];
+
+const pesos = {
+    "A+":100,
+    "A-":75,
+    "B+":50,
+    "B":25,
+    "C":0
+};
+
+function adicionarJogador(){
+
+    const numero =
+    document.getElementById("numeroJogador").value;
+
+    if(!numero){
+        alert("Digite um número.");
+        return;
+    }
+
+    if(jogadores[numero]){
+        alert("Jogador já existe.");
+        return;
+    }
+
+    jogadores[numero] = {
+        passe: [],
+        levantamento: [],
+        saque: [],
+        ataque: [],
+        bloqueioSim:0,
+        bloqueioNao:0
+    };
+
+    criarLinha(numero);
+
+    document.getElementById("numeroJogador").value = "";
+}
+
+function criarLinha(numero){
+
+    const tabela =
+    document.getElementById("tabelaJogadores");
+
+    const linha =
+    document.createElement("tr");
+
+    linha.id = "linha-" + numero;
+
+    linha.innerHTML = `
+        <td>${numero}</td>
+
+        <td>${criarBotoes(numero,'passe')}</td>
+
+        <td>${criarBotoes(numero,'levantamento')}</td>
+
+        <td>${criarBotoes(numero,'saque')}</td>
+
+        <td>${criarBotoes(numero,'ataque')}</td>
+
+        <td>
+            <button onclick="bloqueio(${numero},true)">S</button>
+            <button onclick="bloqueio(${numero},false)">N</button>
+        </td>
+
+        <td class="media" id="media-${numero}">
+            0%
+        </td>
+
+        <td>
+            <button onclick="removerJogador(${numero})">
+                ❌
+            </button>
+        </td>
+    `;
+
+    tabela.appendChild(linha);
+}
+
+function criarBotoes(numero,fundamento){
+
+    return `
+        <button onclick="registrar(${numero},'${fundamento}','A+')">A+</button>
+        <button onclick="registrar(${numero},'${fundamento}','A-')">A-</button>
+        <button onclick="registrar(${numero},'${fundamento}','B+')">B+</button>
+        <button onclick="registrar(${numero},'${fundamento}','B')">B</button>
+        <button onclick="registrar(${numero},'${fundamento}','C')">C</button>
+    `;
+}
+
+function registrar(numero,fundamento,nota){
+
+    jogadores[numero][fundamento]
+        .push(pesos[nota]);
+
+    atualizarMedia(numero);
+    atualizarResumo();
+}
+
+function bloqueio(numero,acertou){
+
+    if(acertou){
+        jogadores[numero].bloqueioSim++;
+    }else{
+        jogadores[numero].bloqueioNao++;
+    }
+
+    atualizarResumo();
+}
+
+function calcularFundamento(lista){
+
+    if(lista.length === 0){
+        return 0;
+    }
+
+    const soma =
+    lista.reduce(
+        (total,valor)=>total+valor,
+        0
+    );
+
+    return soma / lista.length;
+}
+
+function atualizarMedia(numero){
+
+    let soma = 0;
+
+    fundamentos.forEach(f=>{
+
+        soma += calcularFundamento(
+            jogadores[numero][f]
+        );
+
+    });
+
+    const media =
+    soma / fundamentos.length;
+
+    document.getElementById(
+        "media-"+numero
+    ).innerText =
+    media.toFixed(1) + "%";
+}
+
+function removerJogador(numero){
+
+    delete jogadores[numero];
+
+    document.getElementById(
+        "linha-"+numero
+    ).remove();
+
+    atualizarResumo();
+}
+
+function atualizarResumo(){
+
+    let html = "";
+
+    for(const numero in jogadores){
+
+        const jogador =
+        jogadores[numero];
+
+        html += `
+        <h3>Jogador ${numero}</h3>
+        `;
+
+        fundamentos.forEach(f=>{
+
+            const eficiencia =
+            calcularFundamento(
+                jogador[f]
+            );
+
+            html += `
+            ${f}: ${eficiencia.toFixed(1)}%<br>
+            `;
+        });
+
+        html += `
+        Bloqueios: ${jogador.bloqueioSim}<br>
+        Média Geral:
+        ${document.getElementById('media-'+numero)?.innerText || '0%'}
+        <hr>
+        `;
+    }
+
+    document.getElementById(
+        "estatisticas"
+    ).innerHTML = html;
+}
+
+</script>
+
+</body>
+</html>
