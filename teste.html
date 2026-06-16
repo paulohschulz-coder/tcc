@@ -43,6 +43,7 @@ th, td{
     border:1px solid #ccc;
     padding:8px;
     text-align:center;
+    white-space: nowrap; /* Evita que os botões quebrem linha dentro da célula */
 }
 
 th{
@@ -70,22 +71,24 @@ th{
     <button onclick="adicionarJogador()">Adicionar Jogador</button>
 </div>
 
-<table>
-    <thead>
-        <tr>
-            <th>Nº</th>
-            <th>Passe</th>
-            <th>Levantamento</th>
-            <th>Saque</th>
-            <th>Ataque</th>
-            <th>Bloqueio</th>
-            <th>Média</th>
-            <th>Ação</th>
-        </tr>
-    </thead>
+<div style="overflow-x: auto; width: 100%; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 20px;">
+    <table>
+        <thead>
+            <tr>
+                <th>Nº</th>
+                <th>Passe</th>
+                <th>Levantamento</th>
+                <th>Saque</th>
+                <th>Ataque</th>
+                <th>Bloqueio</th>
+                <th>Média</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
 
-    <tbody id="tabelaJogadores"></tbody>
-</table>
+        <tbody id="tabelaJogadores"></tbody>
+    </table>
+</div>
 
 <div class="resumo">
     <h2>Estatísticas</h2>
@@ -145,12 +148,13 @@ function criarLinha(numero){
     const tabela =
     document.getElementById("tabelaJogadores");
 
-    const linha =
+    const tableRow =
     document.createElement("tr");
 
-    linha.id = "linha-" + numero;
+    tableRow.id = "linha-" + numero;
 
-    linha.innerHTML = `
+    // Correção: Adicionado aspas simples '${numero}' nas funções de clique para funcionar no celular
+    tableRow.innerHTML = `
         <td>${numero}</td>
 
         <td>${criarBotoes(numero,'passe')}</td>
@@ -162,8 +166,8 @@ function criarLinha(numero){
         <td>${criarBotoes(numero,'ataque')}</td>
 
         <td>
-            <button onclick="bloqueio(${numero},true)">S</button>
-            <button onclick="bloqueio(${numero},false)">N</button>
+            <button onclick="bloqueio('${numero}',true)">S</button>
+            <button onclick="bloqueio('${numero}',false)">N</button>
         </td>
 
         <td class="media" id="media-${numero}">
@@ -171,23 +175,24 @@ function criarLinha(numero){
         </td>
 
         <td>
-            <button onclick="removerJogador(${numero})">
+            <button onclick="removerJogador('${numero}')">
                 ❌
             </button>
         </td>
     `;
 
-    tabela.appendChild(linha);
+    tabela.appendChild(tableRow);
 }
 
 function criarBotoes(numero,fundamento){
 
+    // Correção: Adicionado aspas simples '${numero}' para proteger o valor enviado no clique
     return `
-        <button onclick="registrar(${numero},'${fundamento}','A+')">A+</button>
-        <button onclick="registrar(${numero},'${fundamento}','A-')">A-</button>
-        <button onclick="registrar(${numero},'${fundamento}','B+')">B+</button>
-        <button onclick="registrar(${numero},'${fundamento}','B')">B</button>
-        <button onclick="registrar(${numero},'${fundamento}','C')">C</button>
+        <button onclick="registrar('${numero}','${fundamento}','A+')">A+</button>
+        <button onclick="registrar('${numero}','${fundamento}','A-')">A-</button>
+        <button onclick="registrar('${numero}','${fundamento}','B+')">B+</button>
+        <button onclick="registrar('${numero}','${fundamento}','B')">B</button>
+        <button onclick="registrar('${numero}','${fundamento}','C')">C</button>
     `;
 }
 
