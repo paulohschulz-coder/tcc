@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Press+Start+2P&display=swap" rel="stylesheet">
 
-<!-- jsPDF para geração de PDF no navegador -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
@@ -124,14 +123,15 @@
     </table>
 </div>
 
-<div class="acoes-globais">
-    <button class="btn-salvar-pdf" onclick="exportarPDF()">📄 Salvar PDF</button>
-    <button class="btn-limpar" onclick="limparTudo()">🗑️ Limpar Tudo</button>
-</div>
-
 <div class="resumo">
     <h2>Estatísticas</h2>
     <div id="estatisticas"></div>
+</div>
+
+
+<div class="acoes-globais">
+    <button class="btn-salvar-pdf" onclick="exportarPDF()">📄 Salvar PDF</button>
+    <button class="btn-limpar" onclick="limparTudo()">🗑️ Limpar Tudo</button>
 </div>
 
 <div id="toast"></div>
