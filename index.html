@@ -8,49 +8,96 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Press+Start+2P&display=swap" rel="stylesheet">
 
+<!-- jsPDF para geração de PDF no navegador -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
 <style>
     body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
     h1, h2 { text-align: center; }
-    
+
     .navbar { background: #ffffff; padding: 10px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .container-navbar {
         display: flex;
         align-items: center;
-        justify-content: space-between; 
+        justify-content: space-between;
         width: 100%;
     }
 
-    .spacer {
-        width: 80px; 
-    }
+    .spacer { width: 80px; }
 
     .titulo-scout {
         font-family: 'Nunito', sans-serif;
         font-size: 32px;
         color: #222;
         margin: 0;
-        flex-grow: 1; 
+        flex-grow: 1;
         text-align: center;
     }
-    
+
     .adicionar { text-align: center; margin-bottom: 20px; }
     input { padding: 8px; width: 120px; }
     button { padding: 6px 10px; margin: 2px; cursor: pointer; border-radius: 4px; }
-    
+
+    .btn-salvar-pdf {
+        background: #e63946;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-left: 10px;
+    }
+    .btn-salvar-pdf:hover { background: #c1121f; }
+
+    .btn-limpar {
+        background: #aaa;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-left: 10px;
+    }
+    .btn-limpar:hover { background: #888; }
+
+    .acoes-globais {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
     table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: center; white-space: nowrap; }
     th { background: #222; color: white; }
     .media { font-weight: bold; }
     .resumo { background: white; padding: 15px; border-radius: 10px; }
+
+    #toast {
+        display: none;
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 9999;
+        animation: fadein 0.3s;
+    }
+    @keyframes fadein { from { opacity: 0; bottom: 10px; } to { opacity: 1; bottom: 30px; } }
 </style>
 </head>
 <body>
 
 <nav class="navbar">
     <div class="container-navbar">
-        <img src="avojoi.png" alt="Logo" width="80">
+        <img src="avojoi.png" alt="Logo" width="80" id="logoAvojoi">
         <h1 class="titulo-scout">Scout Avojoi</h1>
-        <div class="spacer"></div> 
+        <div class="spacer"></div>
     </div>
 </nav>
 
@@ -77,32 +124,58 @@
     </table>
 </div>
 
+<div class="acoes-globais">
+    <button class="btn-salvar-pdf" onclick="exportarPDF()">📄 Salvar PDF</button>
+    <button class="btn-limpar" onclick="limparTudo()">🗑️ Limpar Tudo</button>
+</div>
+
 <div class="resumo">
     <h2>Estatísticas</h2>
     <div id="estatisticas"></div>
 </div>
 
+<div id="toast"></div>
+
 <script>
-const jogadores = {};
+const { jsPDF } = window.jspdf;
+
 const fundamentos = ["passe", "levantamento", "saque", "ataque"];
-
-// Pesos para Passe e Ataque
-const pesosGerais = { "A+": 100, "A-": 75, "B+": 50, "B-": , "C": 0 };
-
-// Pesos compartilhados para Levantamento e Saque
+const pesosGerais   = { "A+": 100, "A-": 75, "B+": 50, "B": 25, "C": 0 };
 const pesosEspeciais = { "A": 100, "B+": 80, "B-": 60, "C": 0 };
 
-function adicionarJogador(){
+// ── Estado ────────────────────────────────────────────────────────────────────
+let jogadores = {};
+
+function salvarStorage() {
+    localStorage.setItem("scoutAvojoi_jogadores", JSON.stringify(jogadores));
+    mostrarToast("💾 Dados salvos automaticamente.");
+}
+
+function carregarStorage() {
+    const dados = localStorage.getItem("scoutAvojoi_jogadores");
+    if (dados) {
+        jogadores = JSON.parse(dados);
+        for (const num in jogadores) {
+            criarLinha(num);
+            atualizarMedia(num);
+        }
+        atualizarResumo();
+    }
+}
+
+// ── Jogadores ─────────────────────────────────────────────────────────────────
+function adicionarJogador() {
     const numero = document.getElementById("numeroJogador").value;
-    if(!numero){ alert("Digite um número."); return; }
-    if(jogadores[numero]){ alert("Jogador já existe."); return; }
+    if (!numero) { alert("Digite um número."); return; }
+    if (jogadores[numero]) { alert("Jogador já existe."); return; }
 
     jogadores[numero] = { passe: [], levantamento: [], saque: [], ataque: [], bloqueioSim: 0, bloqueioNao: 0 };
     criarLinha(numero);
+    salvarStorage();
     document.getElementById("numeroJogador").value = "";
 }
 
-function criarLinha(numero){
+function criarLinha(numero) {
     const tabela = document.getElementById("tabelaJogadores");
     const tr = document.createElement("tr");
     tr.id = "linha-" + numero;
@@ -122,9 +195,8 @@ function criarLinha(numero){
     tabela.appendChild(tr);
 }
 
-function criarBotoes(numero, fundamento){
-    // Se o fundamento for levantamento OU saque, renderiza as opções especiais
-    if(fundamento === 'levantamento' || fundamento === 'saque') {
+function criarBotoes(numero, fundamento) {
+    if (fundamento === 'levantamento' || fundamento === 'saque') {
         return `
             <button onclick="registrar('${numero}','${fundamento}','A')">A</button>
             <button onclick="registrar('${numero}','${fundamento}','B+')">B+</button>
@@ -132,7 +204,6 @@ function criarBotoes(numero, fundamento){
             <button onclick="registrar('${numero}','${fundamento}','C')">C</button>
         `;
     }
-    // Para passe e ataque, mantém a escala padrão
     return `
         <button onclick="registrar('${numero}','${fundamento}','A+')">A+</button>
         <button onclick="registrar('${numero}','${fundamento}','A-')">A-</button>
@@ -142,45 +213,205 @@ function criarBotoes(numero, fundamento){
     `;
 }
 
-function registrar(numero, fundamento, nota){
-    // Se for levantamento ou saque, busca em pesosEspeciais. Se não, usa pesosGerais.
-    let usarPesosEspeciais = (fundamento === 'levantamento' || fundamento === 'saque');
-    let valor = usarPesosEspeciais ? pesosEspeciais[nota] : pesosGerais[nota];
-    
+function registrar(numero, fundamento, nota) {
+    const usarEspeciais = (fundamento === 'levantamento' || fundamento === 'saque');
+    const valor = usarEspeciais ? pesosEspeciais[nota] : pesosGerais[nota];
     jogadores[numero][fundamento].push(valor);
     atualizarMedia(numero);
     atualizarResumo();
+    salvarStorage();
 }
 
-function bloqueio(numero, acertou){
+function bloqueio(numero, acertou) {
     acertou ? jogadores[numero].bloqueioSim++ : jogadores[numero].bloqueioNao++;
     atualizarResumo();
+    salvarStorage();
 }
 
-function calcular(lista){ return lista.length === 0 ? 0 : lista.reduce((a,b) => a+b, 0) / lista.length; }
+function calcular(lista) {
+    return lista.length === 0 ? 0 : lista.reduce((a, b) => a + b, 0) / lista.length;
+}
 
-function atualizarMedia(numero){
+function atualizarMedia(numero) {
     let soma = 0;
     fundamentos.forEach(f => soma += calcular(jogadores[numero][f]));
-    document.getElementById("media-"+numero).innerText = (soma / fundamentos.length).toFixed(1) + "%";
+    document.getElementById("media-" + numero).innerText = (soma / fundamentos.length).toFixed(1) + "%";
 }
 
-function removerJogador(numero){
+function removerJogador(numero) {
     delete jogadores[numero];
-    document.getElementById("linha-"+numero).remove();
+    document.getElementById("linha-" + numero).remove();
     atualizarResumo();
+    salvarStorage();
 }
 
-function atualizarResumo(){
+function atualizarResumo() {
     let html = "";
-    for(const num in jogadores){
+    for (const num in jogadores) {
         html += `<h3>Jogador ${num}</h3>`;
         fundamentos.forEach(f => html += `${f}: ${calcular(jogadores[num][f]).toFixed(1)}%<br>`);
         html += `Bloqueios: ${jogadores[num].bloqueioSim}<br>
-                 Média Geral: ${document.getElementById('media-'+num)?.innerText || '0%'}<hr>`;
+                 Média Geral: ${document.getElementById('media-' + num)?.innerText || '0%'}<hr>`;
     }
     document.getElementById("estatisticas").innerHTML = html;
 }
+
+function limparTudo() {
+    if (!confirm("Deseja apagar todos os dados do scout?")) return;
+    localStorage.removeItem("scoutAvojoi_jogadores");
+    jogadores = {};
+    document.getElementById("tabelaJogadores").innerHTML = "";
+    document.getElementById("estatisticas").innerHTML = "";
+    mostrarToast("🗑️ Dados apagados.");
+}
+
+// ── Exportar PDF ──────────────────────────────────────────────────────────────
+function exportarPDF() {
+    if (Object.keys(jogadores).length === 0) {
+        alert("Nenhum jogador registrado para exportar.");
+        return;
+    }
+
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let cursorY = 15;
+
+    // ── Logo ──────────────────────────────────────────────────────────────────
+    const logoEl = document.getElementById("logoAvojoi");
+    try {
+        const canvas = document.createElement("canvas");
+        canvas.width  = logoEl.naturalWidth  || 80;
+        canvas.height = logoEl.naturalHeight || 80;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(logoEl, 0, 0, canvas.width, canvas.height);
+        const logoData = canvas.toDataURL("image/png");
+        // Centralizado, 25mm de altura
+        const logoH = 25;
+        const logoW = logoH * (canvas.width / canvas.height);
+        doc.addImage(logoData, "PNG", (pageWidth - logoW) / 2, cursorY, logoW, logoH);
+        cursorY += logoH + 6;
+    } catch (e) {
+        // Logo não disponível (CORS / arquivo ausente) — pula
+        console.warn("Logo não pôde ser incluído no PDF:", e);
+    }
+
+    // ── Título ────────────────────────────────────────────────────────────────
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor(34, 34, 34);
+    doc.text("Scout Avojoi", pageWidth / 2, cursorY, { align: "center" });
+    cursorY += 6;
+
+    // Data/hora
+    const agora = new Date();
+    const dataStr = agora.toLocaleDateString("pt-BR") + " " + agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text("Gerado em: " + dataStr, pageWidth / 2, cursorY, { align: "center" });
+    cursorY += 8;
+
+    // ── Tabela de jogadores ───────────────────────────────────────────────────
+    const cabecalho = ["Nº", "Passe (%)", "Levantamento (%)", "Saque (%)", "Ataque (%)", "Bloqueios (S/N)", "Média Geral (%)"];
+    const linhas = [];
+
+    for (const num in jogadores) {
+        const j = jogadores[num];
+        const passe = calcular(j.passe).toFixed(1);
+        const lev   = calcular(j.levantamento).toFixed(1);
+        const saque = calcular(j.saque).toFixed(1);
+        const atq   = calcular(j.ataque).toFixed(1);
+        const blq   = `${j.bloqueioSim} S / ${j.bloqueioNao} N`;
+
+        // Média geral (média dos 4 fundamentos)
+        const mediaNum = ((parseFloat(passe) + parseFloat(lev) + parseFloat(saque) + parseFloat(atq)) / 4).toFixed(1);
+
+        linhas.push([num, passe, lev, saque, atq, blq, mediaNum]);
+    }
+
+    doc.autoTable({
+        head: [cabecalho],
+        body: linhas,
+        startY: cursorY,
+        theme: "grid",
+        headStyles: { fillColor: [34, 34, 34], textColor: 255, fontStyle: "bold", fontSize: 9 },
+        bodyStyles: { fontSize: 9, halign: "center" },
+        columnStyles: { 0: { fontStyle: "bold" } },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        margin: { left: 14, right: 14 },
+    });
+
+    cursorY = doc.lastAutoTable.finalY + 10;
+
+    // ── Detalhes por jogador ──────────────────────────────────────────────────
+    for (const num in jogadores) {
+        const j = jogadores[num];
+
+        // Verifica espaço na página
+        if (cursorY > 250) { doc.addPage(); cursorY = 15; }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(34, 34, 34);
+        doc.text(`Jogador Nº ${num} — Distribuição de notas`, 14, cursorY);
+        cursorY += 6;
+
+        const detalhes = [];
+        const nomesFund = { passe: "Passe", levantamento: "Levantamento", saque: "Saque", ataque: "Ataque" };
+
+        fundamentos.forEach(f => {
+            const vals = j[f];
+            if (vals.length === 0) {
+                detalhes.push([nomesFund[f], "Sem registros", "-", "-", "-"]);
+            } else {
+                const media = calcular(vals).toFixed(1);
+                const min   = Math.min(...vals).toFixed(1);
+                const max   = Math.max(...vals).toFixed(1);
+                detalhes.push([nomesFund[f], vals.length + " registros", min + "%", max + "%", media + "%"]);
+            }
+        });
+
+        doc.autoTable({
+            head: [["Fundamento", "Registros", "Mínimo", "Máximo", "Média"]],
+            body: detalhes,
+            startY: cursorY,
+            theme: "striped",
+            headStyles: { fillColor: [60, 60, 60], textColor: 255, fontSize: 8 },
+            bodyStyles: { fontSize: 8, halign: "center" },
+            columnStyles: { 0: { halign: "left" } },
+            margin: { left: 14, right: 14 },
+        });
+
+        cursorY = doc.lastAutoTable.finalY + 8;
+    }
+
+    // ── Rodapé ────────────────────────────────────────────────────────────────
+    const totalPags = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPags; i++) {
+        doc.setPage(i);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(160, 160, 160);
+        doc.text(`Página ${i} de ${totalPags}`, pageWidth / 2, 290, { align: "center" });
+        doc.text("Scout Avojoi", 14, 290);
+    }
+
+    // ── Download ──────────────────────────────────────────────────────────────
+    const nomeArquivo = `scout_avojoi_${agora.toISOString().slice(0,10)}.pdf`;
+    doc.save(nomeArquivo);
+    mostrarToast("✅ PDF salvo com sucesso!");
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function mostrarToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.style.display = "block";
+    setTimeout(() => { t.style.display = "none"; }, 2800);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+carregarStorage();
 </script>
 </body>
 </html>
