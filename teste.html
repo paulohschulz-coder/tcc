@@ -4,67 +4,55 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scout de Vôlei</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Press+Start+2P&display=swap" rel="stylesheet">
 
 <style>
-body{
-    font-family: Arial, sans-serif;
-    background:#f4f4f4;
-    padding:20px;
-}
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+    h1, h2 { text-align: center; }
+    
+    .navbar { background: #ffffff; padding: 10px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .container-navbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between; 
+        width: 100%;
+    }
 
-h1,h2{
-    text-align:center;
-}
+    .spacer {
+        width: 80px; 
+    }
 
-.adicionar{
-    text-align:center;
-    margin-bottom:20px;
-}
-
-input{
-    padding:8px;
-    width:120px;
-}
-
-button{
-    padding:4px 8px;
-    margin:2px;
-    cursor:pointer;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-    background:white;
-    margin-bottom:20px;
-}
-
-th, td{
-    border:1px solid #ccc;
-    padding:8px;
-    text-align:center;
-    white-space: nowrap; /* Evita que os botões quebrem linha dentro da célula */
-}
-
-th{
-    background:#222;
-    color:white;
-}
-
-.media{
-    font-weight:bold;
-}
-
-.resumo{
-    background:white;
-    padding:15px;
-    border-radius:10px;
-}
+    .titulo-scout {
+        font-family: 'Nunito', sans-serif;
+        font-size: 32px;
+        color: #222;
+        margin: 0;
+        flex-grow: 1; 
+        text-align: center;
+    }
+    
+    .adicionar { text-align: center; margin-bottom: 20px; }
+    input { padding: 8px; width: 120px; }
+    button { padding: 6px 10px; margin: 2px; cursor: pointer; border-radius: 4px; }
+    
+    table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; white-space: nowrap; }
+    th { background: #222; color: white; }
+    .media { font-weight: bold; }
+    .resumo { background: white; padding: 15px; border-radius: 10px; }
 </style>
 </head>
 <body>
 
-<h1>Scout de Vôlei</h1>
+<nav class="navbar">
+    <div class="container-navbar">
+        <img src="avojoi.png" alt="Logo" width="80">
+        <h1 class="titulo-scout">Scout Avojoi Sub 19</h1>
+        <div class="spacer"></div> 
+    </div>
+</nav>
 
 <div class="adicionar">
     <input type="number" id="numeroJogador" placeholder="Número">
@@ -85,7 +73,6 @@ th{
                 <th>Ação</th>
             </tr>
         </thead>
-
         <tbody id="tabelaJogadores"></tbody>
     </table>
 </div>
@@ -96,97 +83,56 @@ th{
 </div>
 
 <script>
-
 const jogadores = {};
+const fundamentos = ["passe", "levantamento", "saque", "ataque"];
 
-const fundamentos = [
-    "passe",
-    "levantamento",
-    "saque",
-    "ataque"
-];
+// Pesos para Passe e Ataque
+const pesosGerais = { "A+": 100, "A-": 75, "B+": 50, "B": 25, "C": 0 };
 
-const pesos = {
-    "A+":100,
-    "A-":75,
-    "B+":50,
-    "B":25,
-    "C":0
-};
+// Pesos compartilhados para Levantamento e Saque
+const pesosEspeciais = { "A": 100, "B+": 80, "B-": 60, "C": 0 };
 
 function adicionarJogador(){
+    const numero = document.getElementById("numeroJogador").value;
+    if(!numero){ alert("Digite um número."); return; }
+    if(jogadores[numero]){ alert("Jogador já existe."); return; }
 
-    const numero =
-    document.getElementById("numeroJogador").value;
-
-    if(!numero){
-        alert("Digite um número.");
-        return;
-    }
-
-    if(jogadores[numero]){
-        alert("Jogador já existe.");
-        return;
-    }
-
-    jogadores[numero] = {
-        passe: [],
-        levantamento: [],
-        saque: [],
-        ataque: [],
-        bloqueioSim:0,
-        bloqueioNao:0
-    };
-
+    jogadores[numero] = { passe: [], levantamento: [], saque: [], ataque: [], bloqueioSim: 0, bloqueioNao: 0 };
     criarLinha(numero);
-
     document.getElementById("numeroJogador").value = "";
 }
 
 function criarLinha(numero){
-
-    const tabela =
-    document.getElementById("tabelaJogadores");
-
-    const tableRow =
-    document.createElement("tr");
-
-    tableRow.id = "linha-" + numero;
-
-    // Correção: Adicionado aspas simples '${numero}' nas funções de clique para funcionar no celular
-    tableRow.innerHTML = `
+    const tabela = document.getElementById("tabelaJogadores");
+    const tr = document.createElement("tr");
+    tr.id = "linha-" + numero;
+    tr.innerHTML = `
         <td>${numero}</td>
-
-        <td>${criarBotoes(numero,'passe')}</td>
-
-        <td>${criarBotoes(numero,'levantamento')}</td>
-
-        <td>${criarBotoes(numero,'saque')}</td>
-
-        <td>${criarBotoes(numero,'ataque')}</td>
-
+        <td>${criarBotoes(numero, 'passe')}</td>
+        <td>${criarBotoes(numero, 'levantamento')}</td>
+        <td>${criarBotoes(numero, 'saque')}</td>
+        <td>${criarBotoes(numero, 'ataque')}</td>
         <td>
             <button onclick="bloqueio('${numero}',true)">S</button>
             <button onclick="bloqueio('${numero}',false)">N</button>
         </td>
-
-        <td class="media" id="media-${numero}">
-            0%
-        </td>
-
-        <td>
-            <button onclick="removerJogador('${numero}')">
-                ❌
-            </button>
-        </td>
+        <td class="media" id="media-${numero}">0%</td>
+        <td><button onclick="removerJogador('${numero}')">❌</button></td>
     `;
-
-    tabela.appendChild(tableRow);
+    tabela.appendChild(tr);
 }
 
-function criarBotoes(numero,fundamento){
-
-    // Correção: Adicionado aspas simples '${numero}' para proteger o valor enviado no clique
+function criarBotoes(numero, fundamento){
+    // Se o fundamento for levantamento OU saque, renderiza as opções especiais
+    if(fundamento === 'levantamento' || fundamento === 'saque') {
+        return `
+            <button onclick="registrar('${numero}','${fundamento}','A')">A</button>
+            <button onclick="registrar('${numero}','${fundamento}','B+')">B+</button>
+            <button onclick="registrar('${numero}','${fundamento}','B-')">B-</button>
+            <button onclick="registrar('${numero}','${fundamento}','C')">C</button>
+        `;
+    }
+    // Para passe e ataque, mantém a escala padrão
     return `
         <button onclick="registrar('${numero}','${fundamento}','A+')">A+</button>
         <button onclick="registrar('${numero}','${fundamento}','A-')">A-</button>
@@ -196,112 +142,45 @@ function criarBotoes(numero,fundamento){
     `;
 }
 
-function registrar(numero,fundamento,nota){
-
-    jogadores[numero][fundamento]
-        .push(pesos[nota]);
-
+function registrar(numero, fundamento, nota){
+    // Se for levantamento ou saque, busca em pesosEspeciais. Se não, usa pesosGerais.
+    let usarPesosEspeciais = (fundamento === 'levantamento' || fundamento === 'saque');
+    let valor = usarPesosEspeciais ? pesosEspeciais[nota] : pesosGerais[nota];
+    
+    jogadores[numero][fundamento].push(valor);
     atualizarMedia(numero);
     atualizarResumo();
 }
 
-function bloqueio(numero,acertou){
-
-    if(acertou){
-        jogadores[numero].bloqueioSim++;
-    }else{
-        jogadores[numero].bloqueioNao++;
-    }
-
+function bloqueio(numero, acertou){
+    acertou ? jogadores[numero].bloqueioSim++ : jogadores[numero].bloqueioNao++;
     atualizarResumo();
 }
 
-function calcularFundamento(lista){
-
-    if(lista.length === 0){
-        return 0;
-    }
-
-    const soma =
-    lista.reduce(
-        (total,valor)=>total+valor,
-        0
-    );
-
-    return soma / lista.length;
-}
+function calcular(lista){ return lista.length === 0 ? 0 : lista.reduce((a,b) => a+b, 0) / lista.length; }
 
 function atualizarMedia(numero){
-
     let soma = 0;
-
-    fundamentos.forEach(f=>{
-
-        soma += calcularFundamento(
-            jogadores[numero][f]
-        );
-
-    });
-
-    const media =
-    soma / fundamentos.length;
-
-    document.getElementById(
-        "media-"+numero
-    ).innerText =
-    media.toFixed(1) + "%";
+    fundamentos.forEach(f => soma += calcular(jogadores[numero][f]));
+    document.getElementById("media-"+numero).innerText = (soma / fundamentos.length).toFixed(1) + "%";
 }
 
 function removerJogador(numero){
-
     delete jogadores[numero];
-
-    document.getElementById(
-        "linha-"+numero
-    ).remove();
-
+    document.getElementById("linha-"+numero).remove();
     atualizarResumo();
 }
 
 function atualizarResumo(){
-
     let html = "";
-
-    for(const numero in jogadores){
-
-        const jogador =
-        jogadores[numero];
-
-        html += `
-        <h3>Jogador ${numero}</h3>
-        `;
-
-        fundamentos.forEach(f=>{
-
-            const eficiencia =
-            calcularFundamento(
-                jogador[f]
-            );
-
-            html += `
-            ${f}: ${eficiencia.toFixed(1)}%<br>
-            `;
-        });
-
-        html += `
-        Bloqueios: ${jogador.bloqueioSim}<br>
-        Média Geral:
-        ${document.getElementById('media-'+numero)?.innerText || '0%'}
-        <hr>
-        `;
+    for(const num in jogadores){
+        html += `<h3>Jogador ${num}</h3>`;
+        fundamentos.forEach(f => html += `${f}: ${calcular(jogadores[num][f]).toFixed(1)}%<br>`);
+        html += `Bloqueios: ${jogadores[num].bloqueioSim}<br>
+                 Média Geral: ${document.getElementById('media-'+num)?.innerText || '0%'}<hr>`;
     }
-
-    document.getElementById(
-        "estatisticas"
-    ).innerHTML = html;
+    document.getElementById("estatisticas").innerHTML = html;
 }
-
 </script>
-
 </body>
 </html>
